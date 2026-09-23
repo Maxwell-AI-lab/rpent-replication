@@ -26,7 +26,7 @@
 
 ## 2. 硬件与环境（非官方路径）
 
-- **执行机**：aura-7（192.168.0.155，华为云 HK 出口 EIP 119.8.43.238），8×昇腾 910B3（64G HBM/卡），192 核鲲鹏，1.5T 内存，/data SFS 共享盘
+- **执行机**：aura-7（昇腾节点，华为云 HK 出口 EIP，具体地址见内部记录），8×昇腾 910B3（64G HBM/卡），192 核鲲鹏，1.5T 内存，/data SFS 共享盘
 - **容器**：`rpent-npu`（镜像 k3-train:cann852-v14 + pip 安装后 docker commit 固化，--privileged + /dev + Ascend driver 只读挂载）
 - **软件栈**：Python 3.11.15 / torch 2.7.1+cpu + torch_npu 2.7.1.post2（CANN 8.5.2）/ rpent editable + rpent-openpi + rpent-libero(robosuite 1.5.2) + rpent-liberopro + rpent-rlinf + sam3 / mujoco 3.3.0
 - **渲染**：`MUJOCO_GL=osmesa`（无 NVIDIA EGL；apt 装 libosmesa6，aliyun ubuntu-ports 源）
