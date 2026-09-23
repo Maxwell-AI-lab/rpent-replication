@@ -200,9 +200,9 @@ SAM3 也能跑 CPU（192 核）：需 model.float() + 全局 tensor shim（cuda�
 | MuJoCo 仿真+osmesa 渲染 | 实时无压力 | 192 核鲲鹏 CPU；agentview+wrist 双相机 |
 | 对照：官方 GPU 参考值 | π0.5 ~0.5 s/chunk | NPU 慢 ~10 倍，单线程评估可接受，大规模并行需优化 |
 
-### 6.6 数据口径
+### 6.7 数据口径
 
-来源：每集 run.log 的逐请求 usage 行（in/out/cache_read 均为累计值，按差分得到单请求口径）+ transcript stats 汇总；分析器 `scripts/analyze_perf2.py` 可在服务器随时重跑。turn 周期含工具执行时间（pi0_pick 一次约 67s、segment 1-2s、move 10-20s），纯 LLM 时延为估算值。
+来源：每集 run.log 的逐请求 usage 行（in/out/cache_read 均为累计值，按差分得到单请求口径）；逐请求时延由 [tool<]→[think]→[model] 时间戳链拆分（秒级粒度，分析器 scripts/req_analyze.py 与 scripts/step_analyze.py）+ transcript stats 汇总；分析器 `scripts/analyze_perf2.py` 可在服务器随时重跑。turn 周期含工具执行时间（pi0_pick 一次约 67s、segment 1-2s、move 10-20s），纯 LLM 时延为估算值。
 
 ## 7. 结论与讨论
 
