@@ -4,12 +4,35 @@
 > 论文：arXiv:2607.08448 "Harness VLA: Steering Frozen VLAs into Reliable Manipulation Primitives via Memory-Guided Agents"
 > 复现窗口：2026-09-22 21:00 → 09-23（跨夜自动执行）。执行：ZCode（GLM-5.3 驱动）+ 用户
 
-## TL;DR
+## 核心结论（实验综述）
 
-1. **端到端复现成功**：非官方硬件路径（华为昇腾 910B3 NPU 而非 NVIDIA GPU）上，RPent 全栈（LLM planner + SAM3 感知 + 冻结 π0.5 + MuJoCo 仿真）完整跑通，`libero_object_swap t2 s0` **首次正式跑即解出**（632 秒，LIBERO 官方终止谓词判定）。
-2. **GLM-5.3 当大脑可用**：走 bigmodel 的 Anthropic 兼容口（`--planner api --model anthropic:GLM-5.3`），视觉输入、tool calling、prompt caching 全部工作。GLM 展现真实智能体行为：主动串行化 SAM3 调用、诊断 VLA 超时并降级、闭环视觉伺服（"final_dist 0.012, at tolerance"）。
-3. **NPU 移植三大坑全部定位并修复**（SAM3 CUDA 融合核挂死、π0.5 TBE 编译 fork 死锁、进程偶发再死锁→外部常驻服务化），全部改动为运行时补丁，不改上游模型/权重。
-4. 20 集小批量评估结果见 §4（跑批中实时更新）。
+### 一句话
+
+**在纯昇腾算力上完整复现了 RPent：GLM-5.3 当大脑 + 冻结 π0.5 + SAM3 的 agent 循环，在 LIBERO-PRO Object Swap 上打出 20/20（100%），验证了"编排而非权重决定成败"的核心主张。**
+
+### 六条结论
+
+**1. 核心主张成立：差距不在模型权重，在编排。**
+同一个冻结 π0.5，单独跑 Object Swap 只有 17%；套上"LLM 大脑 + SAM3 感知 + 记忆 + 原语工具"的循环后 20/20（约 6 倍差距）。这正是 RPent 论文（Harness VLA）的卖点，在我们环境完全复现。
+
+**2. GLM-5.3 是官方最强档位的合格平替。**
+20/20 落在 GPT-6 Astra 档（官方 99%），高于 GPT-5.5（91%）与 Qwen3.6-27B（84%）。接入零改造（Anthropic 兼容口一行环境变量），视觉、工具调用、prompt caching 全部原生可用。且展现出真实智能体行为：并行分割请求过载时主动改串行、VLA 超时后自行诊断降级、闭环伺服中自报误差（"final_dist 0.012, at tolerance"）。
+
+**3. 瓶颈是大脑，不是算力。**
+逐步骤耗时分解（2400+ 步）显示：**GLM 推理占单集时长的 85%，NPU 执行层（VLA+SAM3）合计仅 3-5%**。换更快的大脑或压缩上下文近乎线性提速；NPU 再快 10 倍只省 3%。昇腾当前 ~5.6s/chunk 的推理延迟对单线程评估完全够用。
+
+**4. 长上下文 agent 的经济性取决于 prompt cache。**
+单请求上下文中位 57k、最高 223k tokens；**缓存命中 90.4%** 把每集 prefill 从 1.6M 压到 157k（10 倍）。没有这个命中率，此类 agent 的 token 成本不可接受。实测解码速率 ~40 tok/s，单请求响应中位 18 秒。
+
+**5. 昇腾可跑此类栈，代价是三个工程坑（已全部解决且可复用）。**
+SAM3 静默挂死（CUDA 专用融合核，换通用 F.linear）；π0.5 首推理挂死（CANN 算子编译的 multiprocessing fork 死锁，`TE_PARALLEL_COMPILER=1`）；长跑稳定性（VLA/SAM3 外部常驻服务化，顺带省每集 169 秒加载）。全部为运行时补丁，模型与权重零改动。
+
+**6. SAM3 非硬依赖但强推荐；失败有可观测前兆。**
+抓取主路径 `pi0_pick` 是提示词驱动的闭环策略（π0.5 自带视觉），不依赖 SAM3 坐标；SAM3 的价值在 move 类原语的精确定位与放置验证（segment 工具内置降级路径）。另一发现：任务失败/苦战前 token 特征显著——上下文冲高（>150k）+ 生成量 3 倍 + 请求数 2.5 倍的重试循环，可作在线早停信号（本批 20 集未触发真失败，两集苦战翻盘均符合该特征）。
+
+### 局限（读结论前必看）
+
+20 集样本小于官方口径（100 集/套件），100% 应读作"真实成功率 90-99% 区间"；仅测了最简单套件 Object Swap（官方 Astra 也 99%），难套件（Long Task/Swap，Astra 仅 72-85%）预期会见到失败；未测 Flash Mode 与探索记忆闭环；NPU 延迟使大规模并行评估偏慢。
 
 ## 1. 复现目标与口径
 
