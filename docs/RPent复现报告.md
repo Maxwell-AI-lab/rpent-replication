@@ -224,7 +224,7 @@ SAM3 也能跑 CPU（192 核）：需 model.float() + 全局 tensor shim（cuda�
 
 | 轮 | 时刻 | 主责模块 | 上下文 tok | 缓存命中 | 新增 prefill | 生成 tok | LLM 耗时 s | TTFT≈s | 生成≈s | TPOT ms/tok | 输出内容（决策摘要） | 工具调用（耗时） | 工具耗时 s |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 03:26:15 | Agent·记忆 | 12,779 | 0 | 12779 | 144 | 0.0 | 0 | 3.2 | **0**（实测） | 读记忆层与指南（开局固定动作） | list_dir(0s) read_text_file(0s) read_text_file(0s) list_dir(0s) | 0 |
+| 1 | 03:26:15 | Agent·记忆 | 12,779 | 0 | 12779 | 144 | — | — | — | —（首请求无时间锚点） | 读记忆层与指南（开局固定动作） | list_dir(0s) read_text_file(0s) read_text_file(0s) list_dir(0s) | 0 |
 | 2 | 03:26:27 | Agent·记忆 | 19,323 | 12,736 | 6587 | 547 | 12.0 | 0 | 12.0 | **22**（实测） | 任务记忆缺失，读套件叶子卡片 | read_text_file(0s) read_text_file(0s) read_text_file(0s) read_text_file(0s) | 0 |
 | 3 | 03:26:37 | Agent·记忆 | 35,722 | 19,264 | 16458 | 385 | 10.0 | 2 | 8.5 | 22（拟合） | 读同 regime 兄弟套件策略 | read_text_file(0s) read_text_file(0s) read_text_file(0s) | 0 |
 | 4 | 03:26:48 | Agent·记忆 | 46,669 | 35,712 | 10957 | 532 | 11.0 | 0 | 11.7 | **21**（实测） | 掌握技巧：tomato-can→basket 模式，OBJECT 坐标系 | read_text_file(0s) read_text_file(0s) read_text_file(0s) read_text_file(0s) | 0 |
