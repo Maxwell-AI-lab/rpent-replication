@@ -1,0 +1,167 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "RPent LIBERO-PRO 复现组网（GLM-5.3 大脑 × 昇腾 910B3）",
+    "quality_profile": "showcase",
+    "locale": "zh-CN"
+  },
+  "components": [
+    {
+      "id": "mac",
+      "type": "external",
+      "label": "Mac 工作站",
+      "sublabel": "监控 · 产物回收",
+      "pos": [
+        40,
+        300
+      ],
+      "size": [
+        140,
+        64
+      ]
+    },
+    {
+      "id": "glm",
+      "type": "cloud",
+      "label": "GLM-5.3 大脑",
+      "sublabel": "bigmodel · Anthropic 兼容口",
+      "pos": [
+        300,
+        60
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "rpent agent 循环",
+      "sublabel": "api planner · pydantic-ai 工具调用",
+      "pos": [
+        300,
+        300
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "memory",
+      "type": "database",
+      "label": "记忆语料",
+      "sublabel": "RLinf/RPent-memory · 本地挂载",
+      "pos": [
+        300,
+        540
+      ],
+      "size": [
+        180,
+        60
+      ]
+    },
+    {
+      "id": "env",
+      "type": "backend",
+      "label": "env_server",
+      "sublabel": "MuJoCo+osmesa · LIBERO-PRO assets · CPU",
+      "pos": [
+        620,
+        540
+      ],
+      "size": [
+        190,
+        60
+      ]
+    },
+    {
+      "id": "vla",
+      "type": "backend",
+      "label": "vla_server",
+      "sublabel": "π0.5（7.5G ckpt）· NPU dev0 · :18803",
+      "pos": [
+        920,
+        160
+      ],
+      "size": [
+        190,
+        60
+      ]
+    },
+    {
+      "id": "sam3",
+      "type": "backend",
+      "label": "sam3_server",
+      "sublabel": "SAM3（3.45G）· NPU dev1 · :18802",
+      "pos": [
+        920,
+        440
+      ],
+      "size": [
+        190,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "昇腾 910B3",
+      "wraps": [
+        "vla",
+        "sam3"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "mac-agent",
+      "from": "mac",
+      "to": "agent",
+      "label": "SSH（经 VPN 代理）"
+    },
+    {
+      "id": "agent-glm",
+      "from": "agent",
+      "to": "glm",
+      "label": "视觉+工具调用 · 上下文 74k",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "agent-memory",
+      "from": "agent",
+      "to": "memory",
+      "label": "Task Card 读写",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 34
+    },
+    {
+      "id": "agent-env",
+      "from": "agent",
+      "to": "env",
+      "label": "reset/step/render（HTTP RPC）"
+    },
+    {
+      "id": "agent-vla",
+      "from": "agent",
+      "to": "vla",
+      "label": "vla.predict（5.6s/chunk）",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "agent-sam3",
+      "from": "agent",
+      "to": "sam3",
+      "label": "sam3.segment（1-2s）",
+      "fromSide": "right",
+      "toSide": "left"
+    }
+  ]
+}

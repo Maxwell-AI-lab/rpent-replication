@@ -24,7 +24,36 @@
 
 核心主张：**记忆引导的 agent 循环把冻结 VLA 从 11% 拉到 90%+**。本复现用 GLM-5.3 替代 GPT/Claude 大脑，验证（a）主张方向（b）GLM 档位。
 
-## 2. 硬件与环境（非官方路径）
+## 2. 组网结构与模块
+
+### 2.1 框架图
+
+![RPent 复现组网架构](../arch/rpent-arch.png)
+
+（交互版可缩放/检索：[`arch/rpent-arch.html`](../arch/rpent-arch.html)，浏览器直接打开）
+
+### 2.2 模块清单
+
+| 模块 | 位置 | 实现 | 说明 |
+|---|---|---|---|
+| **GLM-5.3 大脑** | 远程 API（bigmodel） | Anthropic 兼容口 `/api/anthropic` | 规划/推理/工具调用决策；每轮带相机画面与状态 |
+| **rpent agent 循环** | aura-7 容器 `rpent-npu` | `--planner api`（pydantic-ai 工具调用循环） | 全局编排者：渲染提示词→调 GLM→执行工具→回填结果，直到 `finish` |
+| **env_server** | 容器内（每次 run 自动拉起） | MuJoCo 3.3 + robosuite，**osmesa 软渲染**（鲲鹏 CPU） | LIBERO-PRO 仿真：reset/step/渲染相机帧/官方终止谓词判定 |
+| **vla_server** | 容器内**常驻服务** :18803 | π0.5（RLinf LIBERO-130 SFT，7.5G）· **昇腾 dev0** | `vla.predict`：obs→5×7 动作 chunk，~5.6s/chunk |
+| **sam3_server** | 容器内**常驻服务** :18802 | SAM3（3.45G）· **昇腾 dev1** | `sam3.segment`：文本提示→实例掩码，1-2s |
+| **记忆语料** | 容器内本地挂载 | HF dataset `RLinf/RPent-memory`（suite/global/task 三层） | agent 启动即读，提供任务策略参考（Task Card） |
+| **Mac 工作站** | 本地 | SSH 经 VPN 代理 | 监控、产物回收（视频/日志/报告） |
+
+### 2.3 一次任务的数据流
+
+1. agent 读记忆语料（suite 卡片 + 全局经验）→ `view_env_state` 取初始观测 + 双相机帧
+2. GLM-5.3 看图决策：`segment`（SAM3 定位目标）→ `move_to/move_pose`（接近）→ `pi0_pick`（π0.5 闭环抓取，内含最多 20 个 5×7 动作 chunk）→ 放置 → `finish(success)`
+3. 每个工具结果（状态+图像）追加进对话历史，构成下一轮上下文（这就是上下文涨到 74k 的来源）
+4. env_server 的官方终止谓词 `terminated` 即判成功（recipe 写出）；记忆在评估模式只读不写
+
+两条关键设计决策（区别于官方默认部署）：**VLA/SAM3 用外部常驻服务**（避免 run 内 spawn 的 CANN 编译 fork 死锁 + 跨集复用省 169s 加载）；**渲染走 osmesa**（无 NVIDIA EGL）。
+
+## 3. 硬件与环境（非官方路径）
 
 - **执行机**：aura-7（昇腾节点，华为云 HK 出口 EIP，具体地址见内部记录），8×昇腾 910B3（64G HBM/卡），192 核鲲鹏，1.5T 内存，/data SFS 共享盘
 - **容器**：`rpent-npu`（镜像 k3-train:cann852-v14 + pip 安装后 docker commit 固化，--privileged + /dev + Ascend driver 只读挂载）
@@ -32,16 +61,16 @@
 - **渲染**：`MUJOCO_GL=osmesa`（无 NVIDIA EGL；apt 装 libosmesa6，aliyun ubuntu-ports 源）
 - **资产**：π0.5 `RLinf-Pi05-LIBERO-130-fullshot-SFT`（7,473,091,464 字节校验）、SAM3 sam3.pt 3.45GB（modelscope）、LIBERO-PRO assets 622MB、记忆语料 RLinf/RPent-memory
 
-## 3. 移植与调试全记录（按发现顺序）
+## 4. 移植与调试全记录（按发现顺序）
 
-### 3.1 网络五坑（Mac ↔ 155 ↔ 公网）
+### 4.1 网络五坑（Mac ↔ 155 ↔ 公网）
 1. 155 的 HK 出口对 HF Xet CDN（cas-bridge.xethub.hf.co / us.aws.cdn.hf.co）TCP 可连但大文件 0 字节/秒，hf-mirror 对 Xet 文件也只透传重定向 → **π0.5 权重走 Mac（SSRDOG 代理 hf download ~1MB/s）分块推送**：28×256MB、6 路并发 scp ≈1.2MB/s（单流 SSH 经 VPN 仅 38KB/s，并行线性扩展；24 路会打爆代理连接数）
 2. 155 出口总量 ~1.2-1.5MB/s，一个大下载占满时新连接全部饿死（测速必须串行）
 3. files.pythonhosted.org 也在 CloudFront → pip 换 aliyun 镜像；GitHub 依赖 fork 走 gh-proxy.com（须 `git config --global url.insteadOf`，仓库级配置对 pip 临时 clone 无效）
 4. GLM API 从 155 偶发 60 秒超时后自愈（Mac 代理稳定，可作后备）
 5. modelscope 直连稳定 ~1.2MB/s（sam3 3.45GB 走它）
 
-### 3.2 NPU 三大坑（全部 py-spy/栈定位）
+### 4.2 NPU 三大坑（全部 py-spy/栈定位）
 | 症状 | 根因 | 修复 |
 |---|---|---|
 | SAM3 推理 120s 超时、AICore 0% | `sam3/perflib/fused.py::addmm_act` 调 CUDA 融合核 `aten._addmm_activation` + 强制 bf16（torch_npu 不支持该核 → 静默挂死） | fused.py 打 portable fallback（普通 `F.linear`+激活，CPU/NPU 通用）+ `get_device_properties` None shim |
@@ -50,10 +79,10 @@
 
 其他：容器须 `--privileged`（否则 davinci "resource busy"）；`robot_spec.py` 的 `MUJOCO_GL:"egl"` env_overrides 与 `env_server.py` 的 `PYOPENGL_PLATFORM` setdefault 都要改成继承父环境；`rpent-check-llm` 对 GLM 报 sdk_error 是假阴性（16-token 探针被 thinking 吃满，实际默认 8192 正常）。
 
-### 3.3 SAM3 CPU 路径（备用，未采用）
+### 4.3 SAM3 CPU 路径（备用，未采用）
 SAM3 也能跑 CPU（192 核）：需 model.float() + 全局 tensor shim（cuda→cpu 重定向）+ 跳过 sam3_image.py 的显式 bf16 强转。实测 fp32 CPU 单次推理 >590s（OpenBLAS 192 线程劣化），弃用，最终走 NPU。
 
-## 4. 评估结果（libero_object_swap × task0-9 × seed0/1 = 20 集）
+## 5. 评估结果（libero_object_swap × task0-9 × seed0/1 = 20 集）
 
 **最终战绩：20/20 全部解出 = 100%**（2026-09-23 07:31 跑完，LIBERO 官方终止谓词判定）
 
@@ -71,9 +100,9 @@ SAM3 也能跑 CPU（192 核）：需 model.float() + 全局 tensor shim（cuda�
 
 **GLM-5.3 行为观察**：两种策略——pi0_pick（VLA 抓取，主流、快）与手工原语抓取（segment+move_pose+set_gripper，慢，曾在调试期 3621s 超时）；失败前兆特征 = 上下文撑大（151k+）+ decode 3 倍 + 请求 2.5 倍的重试循环（本批量未出现真失败）。智能体行为：主动串行化并行分割、VLA 超时自诊自降级、闭环视觉伺服自述误差。
 
-## 5. 性能数据（20 集完整统计）
+## 6. 性能数据（20 集完整统计）
 
-### 5.1 GLM-5.3 大脑（api planner，20 集均值）
+### 6.1 GLM-5.3 大脑（api planner，20 集均值）
 
 | 指标 | 均值 | 范围 | 说明 |
 |---|---|---|---|
@@ -87,7 +116,7 @@ SAM3 也能跑 CPU（192 核）：需 model.float() + 全局 tensor shim（cuda�
 
 **成本含义**：无缓存时每集需 prefill 累计约 1.6M tok；90.4% 命中后新增仅 157k，**缓存把 prefill 成本压缩约 10 倍**——长上下文 agent 能否商用基本取决于这一项。
 
-### 5.2 逐集明细（20/20 全部成功）
+### 6.2 逐集 LLM 用量明细（20/20 全部成功）
 
 | 集次 | 结果 | 时长(s) | 请求数 | ctx max | prefill 新增 | cache% | decode |
 |---|---|---|---|---|---|---|---|
@@ -114,7 +143,55 @@ SAM3 也能跑 CPU（192 核）：需 model.float() + 全局 tensor shim（cuda�
 
 规律：**顺利集 ~500-1000s / 15-35 请求；苦战集（t4_s1、t6_s1）时长 2-3 倍、请求 2-3 倍、decode 3-5 倍**——token 用量是任务难度的直接代理指标，"重试循环"特征（ctx>150k + decode>50k）可作为在线早停信号。
 
-### 5.3 执行层（昇腾 910B3 实测）
+### 6.3 逐集时间构成（每一步的执行耗时分类，秒）
+
+> 口径：从每集 run.log 抽取**每次 LLM 推理与每次工具调用**的耗时（`scripts/step_analyze.py`，全量逐步骤明细在 [`perf/t*_s*_steps.csv`](../perf/)，共 20 个文件 2400+ 步）。traced ≈ elapsed（误差 <4% 为启动/收尾）。
+
+| 集次 | 结果 | 时长 | LLM 推理 | π0.5 VLA | SAM3 分割 | move 原语 | 读取/读图 |
+|---|---|---|---|---|---|---|---|
+| t0_s0 | ✅ | 1130 | 875 | 53 | 5 | 164 | 7 |
+| t0_s1 | ✅ | 909 | 719 | 70 | 7 | 82 | 0 |
+| t1_s0 | ✅ | 1176 | 818 | 23 | 4 | 305 | 0 |
+| t1_s1 | ✅ | 1130 | 826 | 21 | 10 | 239 | 1 |
+| t2_s0 | ✅ | 473 | 370 | 48 | 6 | 14 | 0 |
+| t2_s1 | ✅ | 469 | 371 | 48 | 4 | 15 | 0 |
+| t3_s0 | ✅ | 739 | 489 | 54 | 6 | 157 | 3 |
+| t3_s1 | ✅ | 639 | 450 | 44 | 3 | 104 | 1 |
+| t4_s0 | ✅ | 493 | 368 | 53 | 3 | 35 | 0 |
+| **t4_s1** | ✅ | **2833** | **2088** | **228** | 16 | **456** | 9 |
+| t5_s0 | ✅ | 572 | 436 | 54 | 4 | 45 | 1 |
+| t5_s1 | ✅ | 841 | 594 | 61 | 9 | 138 | 1 |
+| t6_s0 | ✅ | 558 | 321 | 25 | 3 | 181 | 2 |
+| **t6_s1** | ✅ | **1654** | **1124** | 43 | 8 | **451** | 3 |
+| t7_s0 | ✅ | 431 | 306 | 55 | 6 | 31 | 3 |
+| t7_s1 | ✅ | 1011 | 772 | 36 | 11 | 158 | 0 |
+| t8_s0 | ✅ | 913 | 706 | 24 | 5 | 151 | 0 |
+| t8_s1 | ✅ | 780 | 518 | 24 | 6 | 201 | 0 |
+| t9_s0 | ✅ | 740 | 606 | 33 | 8 | 60 | 2 |
+| t9_s1 | ✅ | 886 | 688 | 26 | 6 | 130 | 0 |
+| **均值** | — | **919** | **781 (85%)** | **26 (3%)** | **7 (1%)** | **99 (11%)** | **2** |
+
+**结构性结论：瓶颈是大脑，不是算力**——GLM 推理占 68-85%，NPU 执行层（VLA+SAM3）合计仅 3-5%。若换更快的大脑或降低每轮上下文，总时长近乎线性缩短；反之 NPU 再快 10 倍也只省 3%。
+
+### 6.4 示例集逐步骤时间线（t2_s0，473 秒全生命周期，节选）
+
+| 步 | 时刻 | 模块 | 动作 | 耗时 | 说明 |
+|---|---|---|---|---|---|
+| 1-4 | 03:26:15 | agent | list_dir / read_text_file ×3 | ~0 | 读记忆：MEMORY.md + suite 卡片 |
+| 5 | 03:26:27 | **GLM-5.3** | turn1 | **12s** | 决定继续读套件记忆 |
+| 10 | 03:26:37 | GLM-5.3 | turn2 | 10s | 读策略卡 + 指南 |
+| 14-18 | 03:26:48 | agent | view_env_state + read ×4 | ~0 | 初始观测 + 分支经验 |
+| 20-22 | 03:27:01 | GLM/agent | read_image ×2 | 12s+0 | 看双相机帧 |
+| 23 | 03:28:15 | **GLM-5.3** | turn6 | **62s** | 规划：决定先分割 4 个物体 |
+| 24-27 | 03:28:16 | **SAM3** | segment ×4 | **1-2s/次** | 全部 found=true |
+| 28 | 03:28:57 | GLM-5.3 | turn7 | 37s | 复核分割结果 |
+| 40 | 03:30:54 | **env** | move_to | **14s** | 移动至抓取位 |
+| 44 | 03:32:18 | **π0.5** | pi0_pick | **48s** | **terminated=true，任务解出** |
+| 48 | 03:33:25 | agent | write_text_file | ~0 | 写观测笔记 |
+| 50 | 03:33:41 | agent | finish(success) | 0 | 收官 |
+
+### 6.5 执行层（NPU 实测）
+
 
 | 指标 | 值 | 备注 |
 |---|---|---|
@@ -123,11 +200,11 @@ SAM3 也能跑 CPU（192 核）：需 model.float() + 全局 tensor shim（cuda�
 | MuJoCo 仿真+osmesa 渲染 | 实时无压力 | 192 核鲲鹏 CPU；agentview+wrist 双相机 |
 | 对照：官方 GPU 参考值 | π0.5 ~0.5 s/chunk | NPU 慢 ~10 倍，单线程评估可接受，大规模并行需优化 |
 
-### 5.4 数据口径
+### 6.6 数据口径
 
 来源：每集 run.log 的逐请求 usage 行（in/out/cache_read 均为累计值，按差分得到单请求口径）+ transcript stats 汇总；分析器 `scripts/analyze_perf2.py` 可在服务器随时重跑。turn 周期含工具执行时间（pi0_pick 一次约 67s、segment 1-2s、move 10-20s），纯 LLM 时延为估算值。
 
-## 6. 结论与讨论
+## 7. 结论与讨论
 
 1. **RPent 的核心主张在我们环境完全成立**：同一个冻结 π0.5，单独跑 Object Swap 只有 17%，套上"LLM 大脑 + SAM3 感知 + 记忆 + 原语工具"的 agent 循环后 20/20。差距不在模型权重，在编排。
 2. **GLM-5.3 是合格的具身大脑**：vision+tool-calling+长上下文+cache 全部工作，成功率达到官方最强档（样本量内）。这为"国产大脑+国产算力跑具身 agent"提供了直接证据。

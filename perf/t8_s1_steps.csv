@@ -1,0 +1,71 @@
+step,t,type,name,cat,dur_s,detail
+1,06:49:49,tool,read_text_file,read,0,read_text_file: { 'path': '/data/rpent/rpent/memory/libero/task_only/o
+2,06:49:49,tool,read_text_file,read,0,read_text_file: { 'path': '/data/rpent/rpent/memory/libero/task_only/o
+3,06:49:49,tool,read_text_file,read,0,"read_text_file: { 'path': '/data/rpent/rpent/memory/libero/MEMORY.md',"
+4,06:49:54,llm,turn1,llm,5,GLM-5.3 推理(思考+决策)
+5,06:49:54,tool,read_text_file,read,0,read_text_file: { 'path': '/data/rpent/rpent/memory/libero/suite/suite
+6,06:49:54,tool,read_text_file,read,0,read_text_file: { 'path': '/data/rpent/rpent/memory/libero/suite/suite
+7,06:49:59,llm,turn2,llm,5,GLM-5.3 推理(思考+决策)
+8,06:49:59,tool,read_text_file,read,0,read_text_file: { 'path': '/data/rpent/rpent/robots/libero/guides/stri
+9,06:49:59,tool,read_text_file,read,0,read_text_file: { 'path': '/data/rpent/rpent/robots/libero/guides/pro_
+10,06:49:59,tool,read_text_file,read,0,read_text_file: { 'path': '/data/rpent/rpent/robots/libero/guides/env_
+11,06:50:08,llm,turn3,llm,9,GLM-5.3 推理(思考+决策)
+12,06:50:08,tool,read_text_file,read,0,read_text_file: { 'path': '/data/rpent/rpent/memory/libero/global/flat
+13,06:50:08,tool,read_text_file,read,0,read_text_file: { 'path': '/data/rpent/rpent/memory/libero/global/bask
+14,06:50:08,tool,read_text_file,read,0,read_text_file: { 'path': '/data/rpent/rpent/memory/libero/global/prob
+15,06:50:15,llm,turn4,llm,7,GLM-5.3 推理(思考+决策)
+16,06:50:15,tool,view_env_state,read,0,"view_env_state: { 'step': 0, 'terminated': false, 'truncated': false, "
+17,06:50:24,llm,turn5,llm,9,GLM-5.3 推理(思考+决策)
+18,06:50:24,tool,read_image,read,0,"read_image: {'artifact': 'agentview_high.png', 'step': 0}"
+19,06:50:37,llm,turn6,llm,13,GLM-5.3 推理(思考+决策)
+20,06:50:38,tool,segment,segment,1,"segment: { 'found': true, 'step': 0, 'camera': 'agentview', 'image_art"
+21,06:50:39,tool,segment,segment,0,"segment: { 'found': true, 'step': 0, 'camera': 'agentview', 'image_art"
+22,06:51:02,llm,turn7,llm,23,GLM-5.3 推理(思考+决策)
+23,06:51:02,tool,back_project,read,0,"back_project: { 'camera': 'agentview', 'resolution': 'high', 'mode': '"
+24,06:51:02,tool,back_project,read,0,"back_project: { 'camera': 'agentview', 'resolution': 'high', 'pixel': "
+25,06:51:02,tool,back_project,read,0,"back_project: { 'camera': 'agentview', 'resolution': 'high', 'pixel': "
+26,06:51:34,llm,turn8,llm,32,GLM-5.3 推理(思考+决策)
+27,06:51:34,tool,back_project,read,0,"back_project: { 'camera': 'agentview', 'resolution': 'high', 'mode': '"
+28,06:51:34,tool,back_project,read,0,"back_project: { 'camera': 'agentview', 'resolution': 'high', 'mode': '"
+29,06:52:08,llm,turn9,llm,34,GLM-5.3 推理(思考+决策)
+30,06:52:08,tool,back_project,read,0,"back_project: { 'camera': 'agentview', 'resolution': 'high', 'mode': '"
+31,06:52:08,tool,back_project,read,0,"back_project: { 'camera': 'agentview', 'resolution': 'high', 'mode': '"
+32,06:53:04,llm,turn10,llm,56,GLM-5.3 推理(思考+决策)
+33,06:53:05,tool,segment,segment,1,"segment: { 'found': true, 'step': 0, 'camera': 'agentview', 'image_art"
+34,06:53:06,tool,segment,segment,0,"segment: { 'found': true, 'step': 0, 'camera': 'agentview', 'image_art"
+35,06:53:31,llm,turn11,llm,25,GLM-5.3 推理(思考+决策)
+36,06:53:32,tool,segment,segment,1,"segment: { 'found': true, 'step': 0, 'camera': 'agentview', 'image_art"
+37,06:53:34,tool,segment,segment,0,"segment: { 'found': true, 'step': 0, 'camera': 'agentview', 'image_art"
+38,06:53:35,tool,segment,segment,0,"segment: { 'found': true, 'step': 0, 'camera': 'agentview', 'image_art"
+39,06:54:20,llm,turn12,llm,45,GLM-5.3 推理(思考+决策)
+40,06:54:37,tool,move_to,move,17,"move_to: { 'step': 1, 'terminated': false, 'truncated': false, 'state'"
+41,06:54:52,llm,turn13,llm,15,GLM-5.3 推理(思考+决策)
+42,06:55:07,tool,move_to,move,15,"move_to: { 'step': 2, 'terminated': false, 'truncated': false, 'state'"
+43,06:55:19,llm,turn14,llm,12,GLM-5.3 推理(思考+决策)
+44,06:55:20,tool,segment,segment,1,"segment: { 'found': true, 'step': 2, 'camera': 'wrist', 'image_artifac"
+45,06:55:33,llm,turn15,llm,13,GLM-5.3 推理(思考+决策)
+46,06:55:57,tool,pi0_pick,pi0_vla,24,"pi0_pick: { 'step': 3, 'terminated': false, 'truncated': false, 'state"
+47,06:56:15,llm,turn16,llm,18,GLM-5.3 推理(思考+决策)
+48,06:56:16,tool,segment,segment,1,"segment: { 'found': false, 'step': 3, 'camera': 'wrist', 'image_artifa"
+49,06:56:25,llm,turn17,llm,9,GLM-5.3 推理(思考+决策)
+50,06:56:26,tool,segment,segment,1,"segment: { 'found': true, 'step': 3, 'camera': 'wrist', 'image_artifac"
+51,06:56:57,llm,turn18,llm,31,GLM-5.3 推理(思考+决策)
+52,06:57:04,tool,set_gripper,move,7,"set_gripper: { 'step': 4, 'terminated': false, 'truncated': false, 'st"
+53,06:57:19,llm,turn19,llm,15,GLM-5.3 推理(思考+决策)
+54,06:57:41,tool,move_to,move,22,"move_to: { 'step': 5, 'terminated': false, 'truncated': false, 'state'"
+55,06:57:57,llm,turn20,llm,16,GLM-5.3 推理(思考+决策)
+56,06:58:22,tool,move_to,move,25,"move_to: { 'step': 6, 'terminated': false, 'truncated': false, 'state'"
+57,06:58:36,llm,turn21,llm,14,GLM-5.3 推理(思考+决策)
+58,06:58:54,tool,move_to,move,18,"move_to: { 'step': 7, 'terminated': false, 'truncated': false, 'state'"
+59,06:59:10,llm,turn22,llm,16,GLM-5.3 推理(思考+决策)
+60,06:59:10,tool,segment,segment,0,"segment: { 'found': false, 'step': 7, 'camera': 'wrist', 'image_artifa"
+61,06:59:25,llm,turn23,llm,15,GLM-5.3 推理(思考+决策)
+62,07:00:53,tool,move_to,move,88,"move_to: { 'step': 8, 'terminated': false, 'truncated': false, 'state'"
+63,07:01:01,llm,turn24,llm,8,GLM-5.3 推理(思考+决策)
+64,07:01:10,tool,release,move,9,"release: { 'step': 9, 'terminated': true, 'truncated': false, 'state':"
+65,07:01:31,llm,turn25,llm,21,GLM-5.3 推理(思考+决策)
+66,07:01:31,tool,write_text_file,other,0,write_text_file: { 'path': '/data/rpent/logs/eval_object_swap/t8_s1/ob
+67,07:02:07,llm,turn26,llm,36,GLM-5.3 推理(思考+决策)
+68,07:02:07,tool,write_text_file,other,0,write_text_file: { 'path': '/data/rpent/logs/eval_object_swap/t8_s1/ob
+69,07:02:23,llm,turn27,llm,16,GLM-5.3 推理(思考+决策)
+70,07:02:23,tool,finish,finish,0,"finish: { '_finish': true, 'status': 'success', 'summary': 'Solved lib"
