@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "一次任务的完整时序（t2_s0：抓沙拉酱瓶入筐，473 秒）",
+    "quality_profile": "showcase",
+    "locale": "zh-CN",
+    "viewBox": [
+      1080,
+      820
+    ],
+    "legend": {
+      "mode": "hidden"
+    }
+  },
+  "participants": [
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "rpent agent",
+      "sublabel": "工具循环·编排"
+    },
+    {
+      "id": "glm",
+      "type": "cloud",
+      "label": "GLM-5.3 大脑",
+      "sublabel": "思考+决策"
+    },
+    {
+      "id": "memory",
+      "type": "database",
+      "label": "记忆",
+      "sublabel": "Task Card"
+    },
+    {
+      "id": "sam3",
+      "type": "security",
+      "label": "SAM3",
+      "sublabel": "分割 1-2s/次"
+    },
+    {
+      "id": "env",
+      "type": "frontend",
+      "label": "env 仿真",
+      "sublabel": "MuJoCo+osmesa"
+    },
+    {
+      "id": "vla",
+      "type": "backend",
+      "label": "π0.5 VLA",
+      "sublabel": "抓取 5.6s/chunk"
+    }
+  ],
+  "segments": [
+    {
+      "from": 158,
+      "to": 276,
+      "label": "① 记忆装载（~45s）"
+    },
+    {
+      "from": 284,
+      "to": 466,
+      "label": "② 感知定位（~3min）"
+    },
+    {
+      "from": 474,
+      "to": 596,
+      "label": "③ 抓取执行（~90s）"
+    },
+    {
+      "from": 604,
+      "to": 686,
+      "label": "④ 验证收官（~70s）"
+    }
+  ],
+  "messages": [
+    {
+      "from": "agent",
+      "to": "memory",
+      "y": 170,
+      "label": "读 Task Card ×4",
+      "variant": "default"
+    },
+    {
+      "from": "agent",
+      "to": "glm",
+      "y": 210,
+      "label": "任务+记忆 46.7k",
+      "variant": "emphasis"
+    },
+    {
+      "from": "glm",
+      "to": "agent",
+      "y": 250,
+      "label": "技巧归纳 11s",
+      "variant": "return"
+    },
+    {
+      "from": "glm",
+      "to": "agent",
+      "y": 290,
+      "label": "改用 SAM3 定位 12s",
+      "variant": "return"
+    },
+    {
+      "from": "agent",
+      "to": "sam3",
+      "y": 330,
+      "label": "segment×4→掩码 1-2s",
+      "variant": "default"
+    },
+    {
+      "from": "agent",
+      "to": "glm",
+      "y": 370,
+      "label": "分割结果 52k",
+      "variant": "emphasis"
+    },
+    {
+      "from": "glm",
+      "to": "agent",
+      "y": 410,
+      "label": "世界坐标定位表 62s",
+      "variant": "return"
+    },
+    {
+      "from": "agent",
+      "to": "env",
+      "y": 450,
+      "label": "move_to 预定位 14s",
+      "variant": "default"
+    },
+    {
+      "from": "agent",
+      "to": "vla",
+      "y": 490,
+      "label": "pi0_pick 提示词驱动",
+      "variant": "emphasis"
+    },
+    {
+      "from": "vla",
+      "to": "env",
+      "y": 530,
+      "label": "12 chunks 闭环 5.6s/个",
+      "variant": "default"
+    },
+    {
+      "from": "env",
+      "to": "agent",
+      "y": 570,
+      "label": "terminated=true 48s",
+      "variant": "return"
+    },
+    {
+      "from": "agent",
+      "to": "sam3",
+      "y": 610,
+      "label": "验证：瓶入筐？2s",
+      "variant": "default"
+    },
+    {
+      "from": "glm",
+      "to": "agent",
+      "y": 650,
+      "label": "finish(success)",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "agent",
+      "from": 178,
+      "to": 646,
+      "type": "backend"
+    },
+    {
+      "participant": "glm",
+      "from": 198,
+      "to": 644,
+      "type": "cloud"
+    },
+    {
+      "participant": "memory",
+      "from": 182,
+      "to": 316,
+      "type": "database"
+    },
+    {
+      "participant": "env",
+      "from": 326,
+      "to": 638,
+      "type": "frontend"
+    },
+    {
+      "participant": "sam3",
+      "from": 366,
+      "to": 644,
+      "type": "security"
+    },
+    {
+      "participant": "vla",
+      "from": 536,
+      "to": 638,
+      "type": "backend"
+    }
+  ]
+}
