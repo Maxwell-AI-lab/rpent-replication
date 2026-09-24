@@ -96,6 +96,21 @@ SAM3 静默挂死（CUDA 专用融合核，换通用 F.linear）；π0.5 首推�
 
 两条关键设计决策（区别于官方默认部署）：**VLA/SAM3 用外部常驻服务**（避免 run 内 spawn 的 CANN 编译 fork 死锁 + 跨集复用省 169s 加载）；**渲染走 osmesa**（无 NVIDIA EGL）。
 
+### 2.4 一次任务的完整时序（谁在哪一步出场）
+
+![RPent 任务时序图](../arch/rpent-seq.png)
+
+（交互版：[`arch/rpent-seq.html`](../arch/rpent-seq.html)，可缩放）
+
+以首个解出的 t2_s0 为脚本，六个参与者（agent 循环 / GLM-5.3 / 记忆 / SAM3 / env 仿真 / π0.5）分四个阶段：
+
+1. **记忆装载（~45s）**：agent 读 Task Card → GLM 归纳技巧（上下文 46.7k tok）
+2. **感知定位（~3min）**：取相机帧 → GLM 发现图片未入视觉、当机立断改用 SAM3 → 分割 ×4 → 反投影得世界坐标定位表
+3. **抓取执行（~90s）**：move_to 预定位 14s → pi0_pick 提示词驱动 → π0.5 发 12 chunks 闭环动作（5.6s/chunk）→ env 判 terminated=true
+4. **验证收官（~70s）**：SAM3 复查瓶入筐 → GLM 确认 → finish(success)
+
+直观结论：**竖线最"热"的是 GLM 和 agent（全程激活），SAM3/env/π0.5 只在自己的节拍出场**——大脑是常驻思考者，其余是按需出场的专家。逐步骤耗时明细见 §6.4。
+
 ## 3. 硬件与环境（非官方路径）
 
 - **执行机**：aura-7（昇腾节点，华为云 HK 出口 EIP，具体地址见内部记录），8×昇腾 910B3（64G HBM/卡），192 核鲲鹏，1.5T 内存，/data SFS 共享盘
