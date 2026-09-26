@@ -2,19 +2,22 @@
 
 复现 [RLinf/RPent](https://github.com/RLinf/RPent)（清华+无问芯穹，"Agentic Infrastructure for the Physical World"，arXiv:2607.08448）——**在纯昇腾算力（无 NVIDIA GPU）上跑通官方 LIBERO-PRO 基准，大脑用 GLM-5.3 替代官方 GPT-6/Claude**。
 
-## 最终成绩（2026-09-23）
+## 最终成绩（2026-09-26 全战役收官，官方 8 套件 × 20 集 = 160 集）
 
-| 方法 | Object Swap 套件 | 备注 |
+**Overall 65.0%（104/160）——官方 12 方法总榜第 6，唯一非 NVIDIA 算力 + 唯一非 GPT/Claude/Qwen 系大脑**
+
+| 方法 | Overall | 备注 |
 |---|---|---|
-| 冻结 π0.5 单独跑 | 17% | 官方数字 |
-| RPent + Qwen3.6-27B | 84% | 官方数字 |
-| RPent + GPT-5.5 | 91% | 官方数字 |
-| RPent + GPT-6 Astra | 99% | 官方数字 |
-| **RPent + GLM-5.3（本仓，昇腾）** | **100%（20/20）** | 20 集小样本，真实档位 90-99% |
+| GPT-6 Astra | 92.63% | 官方最优 |
+| GPT-5.5 / Qwen3.6-27B | 72.1% / 70.63% | |
+| **GLM-5.3 × 昇腾（本仓）** | **65.0%** | object_swap 100% / goal 双套件 80%/75%（压过 GPT-5.5）|
+| ASPIRE / π_RLinf | 61.4% / 50.0% | |
+| π0.5 冻结单独跑 | 11.0% | 对照组：**agent 编排带来 6 倍提升** |
 
-核心主张验证：**同一个冻结 π0.5，套上"LLM 大脑 + SAM3 感知 + 记忆 + 原语工具"的 agent 循环，从 17% 到 20/20**——差距不在模型权重，在编排。
+GLM-5.3 能力画像：物体操作、语义目标（双超 GPT-5.5）> 空间关系（唯一短板）> 长视野。
+性能：GLM 推理占单集 85%（瓶颈是大脑不是算力）；NPU 执行层仅 3-5%（π0.5 5.6s/chunk、SAM3 1-2s）；cache 命中 90.4% 使 prefill 成本降 10 倍。
 
-性能（20 集均值）：GLM 每集 31 请求 / 上下文 avg 74k tok / **cache 命中 90.4%** / decode 22.7k tok；π0.5 约 5.6s/action-chunk（NPU）；SAM3 分割 1-2s（NPU）；单集端到端 919s。
+👉 **[完整最终报告](docs/RPent复现最终报告.md)** · [过程全记录](docs/RPent复现报告.md)
 
 ## 仓库结构
 
